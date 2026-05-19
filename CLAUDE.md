@@ -56,3 +56,13 @@ CSS 3D flip using `backface-visibility: hidden` on two faces (back/front) within
 ## Card Image Requirements
 - Card back: `public/tarot/card-back.png`
 - Card fronts: `public/tarot/{name}.png` (e.g., `宝剑八.png`, `愚人.png`)
+
+## Deployment
+
+**Cloudflare Pages (Primary - 国内可访问):** https://tarot-2mf.pages.dev/
+**Vercel (备用):** https://tarot-c4srzqmro-gengliwus-projects.vercel.app
+
+**GitHub:** https://github.com/gengliwu/tarot
+
+**Environment Variables (Cloudflare Pages 后台配置):**
+- `VITE_DEEPSEEK_API_KEY` - DeepSeek API key for AI card analysis

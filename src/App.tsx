@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import './App.css';
 import { type TarotCard, allTarotCards } from './data/tarotData';
 import { analyzeWithDeepSeek } from './api/deepseek';
@@ -13,9 +13,11 @@ function App() {
   const [showInput, setShowInput] = useState(true);
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectedCards, setSelectedCards] = useState<TarotCard[]>([]);
+  const [shuffledCards, setShuffledCards] = useState<TarotCard[]>([]);
   const [flippingCard, setFlippingCard] = useState<TarotCard | null>(null);
   const [showFlipAnimation, setShowFlipAnimation] = useState(false);
   const [isFlippingAnimating, setIsFlippingAnimating] = useState(false);
+  const [showResult, setShowResult] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -23,10 +25,20 @@ function App() {
   const handleShare = async () => {
     if (!resultRef.current) return;
     try {
+      const originalStyle = resultRef.current.style.cssText;
+      resultRef.current.style.cssText = originalStyle + '; overflow-y: visible; height: auto;';
+
       const canvas = await html2canvas(resultRef.current, {
         backgroundColor: '#1a0a2e',
         scale: 2,
+        useCORS: true,
+        logging: false,
+        scrollY: 0,
+        windowHeight: resultRef.current.scrollHeight + 100,
       });
+
+      resultRef.current.style.cssText = originalStyle;
+
       canvas.toBlob((blob) => {
         if (blob) {
           const url = URL.createObjectURL(blob);
@@ -48,6 +60,7 @@ function App() {
       alert('请先输入你想向塔罗询问的问题');
       return;
     }
+    setShuffledCards([...allTarotCards].sort(() => Math.random() - 0.5));
     setIsSelecting(true);
     setSelectedCards([]);
   };
@@ -70,18 +83,20 @@ function App() {
       setIsFlippingAnimating(true);
     }, 100);
 
+    // 翻转动画0.8s完成后定格0.8秒，再消失，然后显示结果
     setTimeout(() => {
+      setShowFlipAnimation(false);
+      setFlippingCard(null);
+      setIsFlippingAnimating(false);
       if (newSelected.length === 3) {
         const reversed = newSelected.map(() => Math.random() > 0.7);
         setDrawnCards(newSelected);
         setIsReversed(reversed);
         setShowInput(false);
         setIsSelecting(false);
+        setShowResult(true);
       }
-      setShowFlipAnimation(false);
-      setFlippingCard(null);
-      setIsFlippingAnimating(false);
-    }, 950);
+    }, 1700);
   };
 
   const handleAnalysis = async () => {
@@ -114,6 +129,7 @@ function App() {
     setFlippingCard(null);
     setShowFlipAnimation(false);
     setIsFlippingAnimating(false);
+    setShowResult(false);
   };
 
   const cancelSelection = () => {
@@ -124,7 +140,14 @@ function App() {
     setIsFlippingAnimating(false);
   };
 
-  const shuffledCards = [...allTarotCards].sort(() => Math.random() - 0.5);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   return (
     <div className="app" ref={containerRef}>
@@ -158,6 +181,24 @@ function App() {
             <div className="fan-container">
               <div className="fan-cards">
                 {shuffledCards.map((card, index) => {
+                  const isSelected = selectedCards.find(c => c.id === card.id);
+
+                  if (isMobile) {
+                    return (
+                      <div
+                        key={card.id}
+                        className={`fan-card ${isSelected ? 'selected' : ''}`}
+                        onClick={() => handleCardClick(card, index)}
+                      >
+                        <div className="fan-card-inner">
+                          <div className="fan-card-back">
+                            <img src="/tarot/card-back.png" alt="card back" className="card-back-image" />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   const totalCards = 78;
                   const spreadAngle = 100;
                   const angleStep = spreadAngle / (totalCards - 1);
@@ -168,7 +209,6 @@ function App() {
                   const centerY = 520;
                   const x = centerX + Math.sin(rad) * radius - 50;
                   const y = centerY - Math.cos(rad) * radius;
-                  const isSelected = selectedCards.find(c => c.id === card.id);
 
                   return (
                     <div
@@ -215,8 +255,8 @@ function App() {
           </div>
         )}
 
-        {!showInput && !isSelecting && (
-          <div className="result-section" ref={resultRef}>
+        {!showInput && !isSelecting && showResult && (
+          <div className={`result-section ${analysis ? 'result-bg' : ''}`} ref={resultRef}>
             <h1 className="title">✧ 你的塔罗牌 ✧</h1>
             <div className="cards-container">
               {drawnCards.map((card, index) => (
@@ -253,9 +293,11 @@ function App() {
                   {loading ? '解读中...' : 'AI分析塔罗结果'}
                 </button>
               )}
-              <button className="reset-btn" onClick={reset}>
-                重新提问
-              </button>
+              {!loading && (
+                <button className="reset-btn" onClick={reset}>
+                  重新提问
+                </button>
+              )}
             </div>
           </div>
         )}
