@@ -300,7 +300,11 @@ function App() {
               )}
               {!analysis && (
                 <button className="analyze-btn" onClick={handleAnalysis} disabled={loading}>
-                  {loading ? '解读中...' : 'AI分析塔罗结果'}
+                  {loading ? (
+                    <span className="loading-text">
+                      解读中<span className="loading-dots"><span>.</span><span>.</span><span>.</span></span>
+                    </span>
+                  ) : 'AI分析塔罗结果'}
                 </button>
               )}
               {!loading && (
