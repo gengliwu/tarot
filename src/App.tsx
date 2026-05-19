@@ -83,7 +83,7 @@ function App() {
       setIsFlippingAnimating(true);
     }, 100);
 
-    // 翻转动画0.8s完成后定格0.8秒，再消失，然后显示结果
+    // 翻转动画完成后定格0.5秒，再消失，然后显示结果
     setTimeout(() => {
       setShowFlipAnimation(false);
       setFlippingCard(null);
@@ -96,7 +96,7 @@ function App() {
         setIsSelecting(false);
         setShowResult(true);
       }
-    }, 1700);
+    }, 1300);  // 0.8s翻转 + 0.5s定格
   };
 
   const handleAnalysis = async () => {
