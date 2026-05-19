@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import './App.css';
 import { type TarotCard, allTarotCards } from './data/tarotData';
 import { analyzeWithDeepSeek } from './api/deepseek';
@@ -19,10 +19,12 @@ function App() {
   const [isFlippingAnimating, setIsFlippingAnimating] = useState(false);
   const [showResult, setShowResult] = useState(false);
 
+  const [isMobile, setIsMobile] = useState(false);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     if (!resultRef.current) return;
     try {
       const originalStyle = resultRef.current.style.cssText;
@@ -50,12 +52,12 @@ function App() {
           alert('截图已保存，可以发送给朋友分享你的塔罗解读啦 ✧');
         }
       });
-    } catch (error) {
+    } catch {
       alert('截图失败，请重试');
     }
-  };
+  }, []);
 
-  const drawCards = () => {
+  const drawCards = useCallback(() => {
     if (!question.trim()) {
       alert('请先输入你想向塔罗询问的问题');
       return;
@@ -63,10 +65,10 @@ function App() {
     setShuffledCards([...allTarotCards].sort(() => Math.random() - 0.5));
     setIsSelecting(true);
     setSelectedCards([]);
-  };
+  }, [question]);
 
-  const handleCardClick = (card: TarotCard, _index: number) => {
-    if (selectedCards.find(c => c.id === card.id)) return;
+  const handleCardClick = useCallback((card: TarotCard) => {
+    if (selectedCards.some(c => c.id === card.id)) return;
     if (selectedCards.length >= 3) return;
 
     const newSelected = [...selectedCards, card];
@@ -97,9 +99,9 @@ function App() {
         setShowResult(true);
       }
     }, 1300);  // 0.8s翻转 + 0.5s定格
-  };
+  }, [selectedCards]);
 
-  const handleAnalysis = async () => {
+  const handleAnalysis = useCallback(async () => {
     setLoading(true);
     setAnalysis('');
     try {
@@ -116,9 +118,9 @@ function App() {
       setAnalysis(`分析失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
     setLoading(false);
-  };
+  }, [drawnCards, isReversed, question]);
 
-  const reset = () => {
+  const reset = useCallback(() => {
     setDrawnCards([]);
     setIsReversed([]);
     setQuestion('');
@@ -130,17 +132,35 @@ function App() {
     setShowFlipAnimation(false);
     setIsFlippingAnimating(false);
     setShowResult(false);
-  };
+  }, []);
 
-  const cancelSelection = () => {
-    setIsSelecting(false);
+  const cancelSelection = useCallback(() => {
     setSelectedCards([]);
+    setShuffledCards([...allTarotCards].sort(() => Math.random() - 0.5));
     setFlippingCard(null);
     setShowFlipAnimation(false);
     setIsFlippingAnimating(false);
-  };
+  }, []);
 
-  const [isMobile, setIsMobile] = useState(false);
+  // Memoize card positions for fan layout to avoid recalculating on every render
+  const cardPositions = useMemo(() => {
+    const positions: { x: number; y: number; angle: number }[] = [];
+    const totalCards = 78;
+    const spreadAngle = 100;
+    const angleStep = spreadAngle / (totalCards - 1);
+    const radius = 560;
+    const centerX = 600;
+    const centerY = 520;
+
+    for (let index = 0; index < totalCards; index++) {
+      const angle = -(spreadAngle / 2) + index * angleStep;
+      const rad = angle * Math.PI / 180;
+      const x = centerX + Math.sin(rad) * radius - 50;
+      const y = centerY - Math.cos(rad) * radius;
+      positions.push({ x, y, angle });
+    }
+    return positions;
+  }, []);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 768);
@@ -181,14 +201,14 @@ function App() {
             <div className="fan-container">
               <div className="fan-cards">
                 {shuffledCards.map((card, index) => {
-                  const isSelected = selectedCards.find(c => c.id === card.id);
+                  const isSelected = selectedCards.some(c => c.id === card.id);
 
                   if (isMobile) {
                     return (
                       <div
                         key={card.id}
                         className={`fan-card ${isSelected ? 'selected' : ''}`}
-                        onClick={() => handleCardClick(card, index)}
+                        onClick={() => handleCardClick(card)}
                       >
                         <div className="fan-card-inner">
                           <div className="fan-card-back">
@@ -199,28 +219,18 @@ function App() {
                     );
                   }
 
-                  const totalCards = 78;
-                  const spreadAngle = 100;
-                  const angleStep = spreadAngle / (totalCards - 1);
-                  const angle = -(spreadAngle / 2) + index * angleStep;
-                  const rad = angle * Math.PI / 180;
-                  const radius = 560;
-                  const centerX = 600;
-                  const centerY = 520;
-                  const x = centerX + Math.sin(rad) * radius - 50;
-                  const y = centerY - Math.cos(rad) * radius;
-
+                  const pos = cardPositions[index];
                   return (
                     <div
                       key={card.id}
                       className={`fan-card ${isSelected ? 'selected' : ''}`}
                       style={{
-                        left: `${x}px`,
-                        top: `${y}px`,
-                        '--rotation': `${angle}deg`,
+                        left: `${pos.x}px`,
+                        top: `${pos.y}px`,
+                        '--rotation': `${pos.angle}deg`,
                         zIndex: index,
                       } as React.CSSProperties}
-                      onClick={() => handleCardClick(card, index)}
+                      onClick={() => handleCardClick(card)}
                     >
                       <div className="fan-card-inner">
                         <div className="fan-card-back">

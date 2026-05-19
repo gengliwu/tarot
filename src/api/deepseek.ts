@@ -60,10 +60,10 @@ ${cardDescriptions}
   } catch (error) {
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401) {
-        throw new Error('API Key无效，请检查配置');
+        throw new Error('API Key无效，请检查配置', { cause: error });
       }
-      throw new Error(`API调用失败: ${error.response?.data?.error?.message || error.message}`);
+      throw new Error(`API调用失败: ${error.response?.data?.error?.message || error.message}`, { cause: error });
     }
-    throw new Error('分析失败，请重试');
+    throw new Error('分析失败，请重试', { cause: error });
   }
 };

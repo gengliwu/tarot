@@ -396,6 +396,11 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  pointer-events: none;
+}
+
+.fan-container > * {
+  pointer-events: auto;
 }
 
 /* Fan Cards - the actual fan layout */
@@ -431,6 +436,8 @@ body {
   transform-origin: center bottom;
   user-select: none;
   transform: rotate(var(--rotation, 0deg));
+  will-change: transform, filter;
+  backface-visibility: hidden;
 }
 
 .fan-card:hover, .fan-card:active {
@@ -512,6 +519,8 @@ body {
   align-items: center;
   gap: 10px;
   margin-bottom: 15px;
+  position: relative;
+  z-index: 1000;
 }
 
 .selection-info p {
@@ -523,12 +532,15 @@ body {
   padding: 10px 30px;
   font-size: 1rem;
   font-family: inherit;
-  background: transparent;
+  background: rgba(45, 27, 78, 0.8);
   color: var(--text);
   border: 1px solid rgba(232, 213, 183, 0.3);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s;
+  position: relative;
+  z-index: 1000;
+  pointer-events: auto;
 }
 
 .cancel-btn:hover {
@@ -901,8 +913,9 @@ body {
   height: 100%;
   position: relative;
   transform-style: preserve-3d;
-  transition: transform 0.5s cubic-bezier(0.4, 0.0, 0.2, 1);    
+  transition: transform 0.5s cubic-bezier(0.4, 0.0, 0.2, 1);
   transform: rotateY(0deg);
+  will-change: transform;
 }
 
 .flip-card-inner.flipping {
